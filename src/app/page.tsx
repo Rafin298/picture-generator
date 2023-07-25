@@ -1,95 +1,104 @@
-import Image from 'next/image'
-import styles from './page.module.css'
+"use client";
+import Image from "next/image";
+import styles from "./page.module.css";
+import { useState, useEffect } from "react";
+import { Configuration, OpenAIApi } from 'openai';
 
 export default function Home() {
+  const [prompt, setPrompt] = useState("");
+  const [result, setResult] = useState(
+    "https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_960_720.png"
+  );
+  const [loading, setLoading] = useState(false);
+  const [placeholder, setPlaceholder] = useState(
+    "Generate Image with your imagination."
+  );
+  const [typedText, setTypedText] = useState("");
+  const text = "Creating image...Please Wait...";
+
+  const stars = [];
+  for (let i = 0; i < 20; i++) {
+    stars.push(<div className="shooting_star" key={i}></div>);
+  }
+  const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error("apiKey is not defined in config file");
+  }
+
+
+  const configuration = new Configuration({ apiKey });
+  const openai = new OpenAIApi(configuration);
+
+  const generateImage = async () => {
+    setPlaceholder(`Search ${prompt}..`);
+    setLoading(true);
+    const res = await openai.createImage({
+      prompt: prompt,
+      n: 1,
+      size: "512x512",
+    });
+    setLoading(false);
+    const data = res.data;
+    setResult(data.data[0].url || "no imagine found");
+  };
+
+  useEffect(() => {
+    if (loading) {
+      let i = 0;
+      const typing = setInterval(() => {
+        setTypedText(text.slice(0, i));
+        i++;
+        if (i > text.length) {
+          i = 0; // reset i to 0
+          setTypedText(""); // reset typedText to an empty string
+        }
+      }, 100);
+      return () => clearInterval(typing);
+    }
+  }, [loading]);
+
+  const sendEmail = (url = "") => {
+    url = result;
+    const message = `Here's your image download link: ${url}`;
+    window.location.href = `mailto:someone@example.com?subject=Image Download Link&body=${message}`;
+  };
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
+    <div className={`${styles.app_main}`}>
+      <div className={styles.item}>
+      <h2 className={styles.h2}>Picture Generator</h2>
+
+      <textarea
+        className={styles.app_input}
+        placeholder={placeholder}
+        onChange={(e) => setPrompt(e.target.value)}
+      />
+      <button className={styles.button} onClick={generateImage}>Generate Image</button>
+      </div>
+      <div className={`${styles.item} ${styles.center}`}>
+      {loading ? (
+        <>
+          {/* <div className={styles.lds_facebook}><div></div><div></div><div></div></div> */}
+          <div className={styles.loader}></div>
+        </>
+      ) : (
+        <>
+          {result.length > 0 ? (
+            <img
+              className={styles.result_image}
+              src={result}
+              alt="result"
+              onClick={() => sendEmail(result)}
+              style={{ cursor: "pointer" }}
+              // width={512}
+              // height={512}
             />
-          </a>
-        </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+          ) : (
+            <></>
+          )}
+        </>
+      )}
+    </div>
+    </div>
+  );
 }
